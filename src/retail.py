@@ -8,7 +8,19 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class ESretail:
-    def __init__(self, db_filename='retail.db'):
+    def __init__(self, db_filename: str = 'retail.db') -> None:
+        """
+        Initializes the ESretail class and establishes a connection to the SQLite database.
+
+        Args:
+            db_filename (str): The name of the SQLite database file. Default is 'retail.db'.
+
+        Returns: 
+            None
+
+        Raises:
+            sqlite3.Error: If there is an error connecting to the SQLite database.
+        """
         # Path to the SQLite database at the project root
         self.db_path = os.path.join(os.path.dirname(__file__), '..', db_filename)
 
@@ -20,19 +32,23 @@ class ESretail:
         except sqlite3.Error as e:
             logging.error(f"Error connecting to the database: {e}")
             raise
+
         
-    def close_connection(self):
-        """Method to close the database connection"""
-        if self.conn:
-            self.conn.close()
-            logging.info("Connection closed.")
 
-    def bulk_import(self, df: pd.DataFrame, batch_size=20):
+    def bulk_import(self, df: pd.DataFrame, batch_size: int = 20) -> None:
         """
-        Insère les données dans la base de données SQLite par batch.
+        Inserts data into the SQLite database in batches.
 
-        :param df: DataFrame contenant les colonnes id, transaction_date, name, quantity, amount_excl_tax, amount_inc_tax
-        :param batch_size: La taille du batch pour les insertions
+        Args:
+            df (pd.DataFrame): DataFrame containing the columns id, transaction_date, name, quantity, amount_excl_tax, amount_inc_tax.
+            batch_size (int): The size of the batch for insertions. Default is 20.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: If the 'transaction_date' field is missing or None.
+            sqlite3.Error: If there is an error during the insertion process.
         """
         # Log the process
         logging.info("Starting bulk import process")
@@ -45,28 +61,29 @@ class ESretail:
         with self.conn:
             try:
                 self.cursor.execute("SELECT id FROM transactions")
-                existing_ids = set(row[0] for row in self.cursor.fetchall())  # Extraire tous les IDs existants
+                existing_ids = set(row[0] for row in self.cursor.fetchall())  # Extract all existing IDs
                 filtered_metadata = [item for item in list_dict if item['id'] not in existing_ids]
+
                 for i in range(0, len(filtered_metadata), batch_size):
-                    batch_dict = filtered_metadata[i:i+batch_size]  # Extraire un batch
-                    # Insertion en lot (batch insertions)
-                    for dict in batch_dict:
-                        if 'transaction_date' not in dict or dict.get('transaction_date') is None:
-                            raise ValueError("TES OU la con")
+                    batch_dict = filtered_metadata[i:i + batch_size]  # Extract a batch
+
+                    # Ensure all items have a valid transaction_date
+                    for record in batch_dict:
+                        if 'transaction_date' not in record or record.get('transaction_date') is None:
+                            raise ValueError("Transaction date is missing or None.")
+
+                    # Batch insertions
                     self.cursor.executemany(sql_query, batch_dict)
-                    self.conn.commit()  # Confirmer la transaction pour chaque batch                
+                    self.conn.commit()  # Commit transaction for each batch                
+
                 logging.info("Bulk import completed successfully.")
             except sqlite3.Error as e:
-                # Log l'erreur en cas d'échec
+                # Log the error in case of failure
                 logging.error(f"An error occurred during bulk import: {e}")
-                self.conn.rollback()  # Annule les changements si erreur
-                raise  
-            # finally:
-            #     # Fermer la connexion après import
-            #     self.close_connection()
-            #     logging.info("Database connection closed.")    
+                self.conn.rollback()  # Rollback changes if error
+                raise
 
-    def count_transactions_by_date(self, transaction_date):
+    def count_transactions_by_date(self, transaction_date:str):
         """
         Counts the number of rows with a specific transaction_date.
         
@@ -85,6 +102,24 @@ class ESretail:
         except sqlite3.Error as e:
             logging.error(f"Error executing query: {e}")
             return None
+    def count_total_id(self):
+        """
+        Counts the number of rows.
+        
+        :return: The count of ids.
+        """
+        query = "SELECT COUNT(*) FROM transactions"
+        
+        try:
+            with self.conn:
+                
+                self.cursor.execute(query)
+                count = self.cursor.fetchone()[0]
+                logging.info(f"Count of transactions on id: {count}")
+                return count
+        except sqlite3.Error as e:
+            logging.error(f"Error executing query: {e}")
+            return None
     
     def sum_total_transaction(self):
         """
@@ -99,12 +134,14 @@ class ESretail:
                 self.cursor.execute(query)
                 total_sum = self.cursor.fetchone()[0]
                 logging.info(f"Sum of amount_inc_tax: {total_sum}")
+                if not total_sum:
+                    return 0
                 return total_sum
         except sqlite3.Error as e:
             logging.error(f"Error executing query: {e}")
             return None
     
-    def get_balance_by_date_sql(self, product_name="Amazon Echo Dot"):
+    def get_balance_by_date_sql(self, product_name:str="Amazon Echo Dot"):
         """
         Calculates the balance (SELL - BUY) by date for a specific product using SQL query.
         
@@ -114,8 +151,8 @@ class ESretail:
         query = """
         SELECT transaction_date,
                SUM(CASE 
-                       WHEN category = 'SELL' THEN quantity
-                       WHEN category = 'BUY' THEN -quantity
+                       WHEN category = 'SELL' THEN amount_inc_tax
+                       WHEN category = 'BUY' THEN -amount_inc_tax
                        ELSE 0
                    END) AS balance
         FROM transactions
@@ -144,8 +181,8 @@ class ESretail:
         query = """
         SELECT transaction_date,
                SUM(CASE 
-                       WHEN category = 'SELL' THEN quantity
-                       WHEN category = 'BUY' THEN -quantity
+                       WHEN category = 'SELL' THEN amount_inc_tax
+                       WHEN category = 'BUY' THEN -amount_inc_tax
                        ELSE 0
                    END) AS balance
         FROM transactions

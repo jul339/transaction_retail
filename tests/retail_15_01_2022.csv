@@ -1,0 +1,11 @@
+id,category,description,quantity,amount_excl_tax,amount_inc_tax
+0284f92e-54f7-4766-880d-2cc5a8993a89,SELL,Nike Running Shoes,5,399.95,479.94
+05d7b23c-3b9a-45c1-a1a8-c947d5418b68,BUY,Fitbit Charge 5,5,449.95,539.94
+0e2ff281-a559-4c74-a171-fdb7f193e33a,SELL,Patagonia Jacket,5,799.95,959.94
+12012793-886c-45c5-a88d-bdbd78896bf9,SELL,Fitbit Charge 5,3,269.97,323.96
+1e694828-8621-418a-b612-30fb8c73530c,SELL,Dell XPS 13,2,2199.98,2639.98
+1e76ec55-07f8-4427-970b-0d11c3322f75,BUY,Nike Running Shoes,4,319.96,383.95
+24f8da71-e469-4176-8005-a57dab7d686d,SELL,Levis Jeans,5,199.95,239.94
+2af89ed0-04df-4843-9b34-6b8820802085,BUY,Amazon Echo Dot,4,99.96,119.95
+2bd64c3e-0fc7-4e21-b3c0-f059740dd984,BUY,Dell XPS 13,2,2199.98,2639.98
+7e04d4be-c0e2-47ee-9b86-9edef307a935,SELL,Amazon Echo Dot,2,49.98,59.98

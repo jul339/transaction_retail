@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import unittest
-from src.etl.main import read_transaction_file
+from src.etl.etl_pipeline import read_transaction_file
 
 
 class TransactionTest(unittest.TestCase):
@@ -78,11 +78,15 @@ class TransactionTest(unittest.TestCase):
         self.assertEqual(len(res_badlines), 2)
         self.assertIn("94ca3d4f", res_badlines)
         self.assertIn("ac82915d", res_badlines)
-    # def test_number_of_transactions_on_15_01_2022(self):
-    #     expected_nb_transactions = 54
-        # check the number of transactions in the database
-        # after loading data from the CSV file
 
+    # @pytest.fixture
+    # def test_db():
+    #     # Setup: Créer une base de données de test
+    #     test_db_path = 'tests/test_database.db'
+    #     conn = sqlite3.connect(test_db_path)
+    #     yield conn
+    #     conn.close()
+    #     os.remove(test_db_path)
 
 if __name__ == '__main__':
     unittest.main()
