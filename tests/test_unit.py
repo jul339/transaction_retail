@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import unittest
-from src.etl.etl_pipeline import read_transaction_file
+from src.etl_pipeline import read_transaction_file
 
 
 class TransactionTest(unittest.TestCase):

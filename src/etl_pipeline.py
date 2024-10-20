@@ -1,14 +1,14 @@
-from datetime import datetime
-from typing import List, Tuple
-import sqlite3
 import os
 import pandas as pd
-import logging as log
-import gzip
+import logging
 from src.retail import ESretail
-log.basicConfig(filename='etl_log.log', 
-                    level=log.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+from prefect import flow, task
+
+log = logging.getLogger("retail")
+log.setLevel(logging.DEBUG)
+
+
+
 class Cols :
     id = 'id'
     category = 'category'
@@ -16,6 +16,8 @@ class Cols :
     quantity = 'quantity'
     amount_excl_tax = 'amount_excl_tax'
     amount_inc_tax = 'amount_inc_tax'
+
+
 
 def find_csv(folder_path: str) -> str:
     """
@@ -37,7 +39,7 @@ def find_csv(folder_path: str) -> str:
     if len(csv_files) == 0:
         raise FileNotFoundError("Data folder should have one file")
     return csv_files[0]
-
+@task
 def extract() -> tuple[str, str]:
     """
     Extracts data from a CSV file located in a specified folder and saves it in a structured format in the datalake.
@@ -103,7 +105,7 @@ def read_transaction_file(df:pd.DataFrame) -> tuple[pd.DataFrame, list]:
         try:
             id = str(df[Cols.id].iloc[i])
         except ValueError:
-            continue  # Skip the entry if ID cannot be converted to string.
+            continue
 
         try:
             category = str(df[Cols.category].iloc[i])
@@ -112,8 +114,8 @@ def read_transaction_file(df:pd.DataFrame) -> tuple[pd.DataFrame, list]:
             amount_excl_tax = round(float(df[Cols.amount_excl_tax].iloc[i]), 2)
             amount_inc_tax = round(float(df[Cols.amount_inc_tax].iloc[i]), 2)
         except ValueError:
-            bad_lines.append(id)  # Add the ID to bad_lines if any conversion fails.
-            continue  # Skip the entry if any field cannot be converted.
+            bad_lines.append(id)
+            continue  
 
         transaction_dict = {
             Cols.id: id,
@@ -139,7 +141,7 @@ def read_transaction_file(df:pd.DataFrame) -> tuple[pd.DataFrame, list]:
 
     return clean_df, bad_lines
 
-    
+@task
 def transforme_transactions(incoming_file_path: str, file_name: str) -> pd.DataFrame:
     """
     Transforms transaction data from a CSV file into a cleaned DataFrame and saves it as a Parquet file.
@@ -179,8 +181,8 @@ def transforme_transactions(incoming_file_path: str, file_name: str) -> pd.DataF
 
     return unique_df
 
-
-def load_data(df: pd.DataFrame, db_file_name: str) -> None:
+@task
+def load_data(df: pd.DataFrame, db_file_name: str= 'retail.db') -> None:
     """
     Loads transaction data into a SQLite database.
 
@@ -204,12 +206,11 @@ def load_data(df: pd.DataFrame, db_file_name: str) -> None:
         retail.conn.close()
 
 
-
-# transforme_transactions(extract())
+@flow(name="Retail Flow")
 def run_etl():
     incoming_file_path, file_name = extract()
     clean_df = transforme_transactions(incoming_file_path, file_name)
     load_data(clean_df)
 
 if __name__ == "__main__":
-    extract()
+    run_etl()

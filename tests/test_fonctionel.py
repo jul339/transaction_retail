@@ -3,7 +3,7 @@ import pandas as pd
 import sqlite3
 import os
 from src.retail import ESretail
-from src.etl.etl_pipeline import *
+from src.etl_pipeline import *
 import unittest
 
 class TransactionTest(unittest.TestCase):
