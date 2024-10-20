@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import List, Tuple
 import sqlite3
 import os
 import pandas as pd
@@ -40,7 +41,7 @@ def extract():
         
     return raw_data_folder, file_name
 
-def read_transaction_file(df: pd.DataFrame):
+def read_transaction_file(df: pd.DataFrame) :#-> Tuple(pd.DataFrame, List[str]): # type: ignore
     required_columns = {Cols.id, Cols.category, Cols.description, Cols.quantity, Cols.amount_excl_tax, Cols.amount_inc_tax}
     if not required_columns.issubset(df.columns) or len(df.columns) != len(required_columns):
         raise KeyError("The colomn of the dataframe doesn't correspond the colomn of the database")
@@ -57,8 +58,8 @@ def read_transaction_file(df: pd.DataFrame):
             category = str(df[Cols.category].iloc[i])
             description = str(df[Cols.description].iloc[i])
             quantity = int(df[Cols.quantity].iloc[i])
-            amount_excl_tax = float(df[Cols.amount_excl_tax].iloc[i])
-            amount_inc_tax = float(df[Cols.amount_inc_tax].iloc[i])
+            amount_excl_tax = round(float(df[Cols.amount_excl_tax].iloc[i]), 2)
+            amount_inc_tax = round(float(df[Cols.amount_inc_tax].iloc[i]), 2)
 
         except ValueError as e:
             bad_lines.append(id)
@@ -87,15 +88,22 @@ def read_transaction_file(df: pd.DataFrame):
     
 def transforme_transactions(incoming_file_path, file_name):
     df = pd.read_csv(os.path.join(incoming_file_path, file_name))
-    clean_df, bad_lines = read_transaction_file(df)
-    unique_df = clean_df[~clean_df['id'].duplicated(keep=False)]
     parquet_retail_file_name = f"retail_data{file_name[7:0]}.parquet"
     parquet_retail_path = os.path.join(incoming_file_path, parquet_retail_file_name)
+    
+    clean_df, bad_lines = read_transaction_file(df)
+
+    unique_df = clean_df[~clean_df['id'].duplicated(keep=False)]
+
     file_year = file_name.split("_")[3][0:4]
     file_month = file_name.split("_")[2]
     file_day = file_name.split("_")[1]
-    df['tansaction_date'] = f"{file_year}-{file_month}-{file_day}"
- 
+    unique_df['transaction_date'] = f"{file_year}-{file_month}-{file_day}"
+
+    unique_df.rename(columns={'description': 'name'}, inplace=True)
+
+    
+
     if not os.path.exists(parquet_retail_path):
         if bad_lines:
             log.warning(f"Bad line(s) in the file : {incoming_file_path}\n ID of the bad lines : {bad_lines[0]}")
@@ -103,6 +111,7 @@ def transforme_transactions(incoming_file_path, file_name):
                 log.warning(line)
         clean_df.to_parquet(parquet_retail_path, index=False)
 
+    return unique_df
 
 def load(**kwargs):
     # Get transformed data

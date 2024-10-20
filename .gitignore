@@ -1,0 +1,6 @@
+.conda
+.vscode
+jupi.ipynb
+etl_log.log
+*.pyc
+datalake/*
